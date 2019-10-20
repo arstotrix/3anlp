@@ -19,6 +19,20 @@ define Stem Letter+;
 
 define Input Stem Number Case;
 
+# обработка основ на согласный, написанная мной
+define LongVowel ä ä | ö ö | y y | e e | i i | a a | o o | u u; 
+define Ihminen n e n -> s e  ||  _ /["+Sg" "+Part"];
+define IhminenPart n e n -> s  ||  _ "+Sg" "+Part";
+define Ajatus s -> k s e || Vowel _ /["+Sg" "+Part"];
+define HyvyysSg s -> t e || LongVowel _ "+Sg" /"+Part" ;
+define HyvyysPl s -> k s e || LongVowel _ "+Pl" ; 
+define HyvyysPart s -> t || LongVowel _ "+Sg" "+Part" ;
+define AskelEl e l -> e l e ||  _ "+Sg" /"+Part" ;
+define AskelEn e n -> e n e ||  _ "+Sg" /"+Part" ;
+define Lyhyt t -> e || [ u | y ] _ "+Sg" ;
+
+define Special Ihminen .o. IhminenPart .o. Ajatus .o. HyvyysSg .o. HyvyysPl .o. HyvyysPart .o. AskelEl .o. AskelEn .o. Lyhyt;
+
 # команды задают номинативы - сингулярис и плюралис и объединяют их в одно множество
 define NomPl "+Pl" "+Nom" -> "^" t || _ ;
 define NomSg "+Sg" "+Nom" -> "^" || _ ;
@@ -69,9 +83,9 @@ define Alternations N2M  .o. EOmit .o. EReal .o. ThreeLetter .o. TwoLetter .o. S
 # код задаёт множество всех возможных изменений при образовании падежей
 define Affixes Nominatives .o. Genetive .o. OtherCases .o. NumberInfl .o. Alternations .o. Phonetics;
 
-# команда очищает ввод для нового ввода
+# команда очищает ввод
 define Cleanup "^" -> 0 || _ ;
 
 # команды объединяют все действия и применяемые правила в одну последовательность
-define Grammar Input .o. Affixes .o. Cleanup ;
+define Grammar Input .o. Special .o. Affixes .o. Cleanup ;
 push Grammar

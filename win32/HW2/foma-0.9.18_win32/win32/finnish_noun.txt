@@ -1,0 +1,89 @@
+# первые 4 команды задают множество согласных и три множества гласных разных видов
+# пятая задаёт множество всех гласных
+# шестая - множество вариантов гласный/согласгый
+define Consonant b | c | d | f | g | h | j | k | l | m | n | p | q | r | s | t | v | w | x | z ;
+define FrontVowel ä | ö | y ;
+define NeutralVowel e | i ;
+define BackVowel a | o | u ;
+define Vowel FrontVowel | NeutralVowel | BackVowel | A | E;
+define Letter Vowel | Consonant;
+
+# команды задают систему падежа-числа в финском
+define Case "+Nom" | "+Gen" | "+Part" | "+In" | "+All" ;
+define Number "+Sg" | "+Pl" ; 
+
+# команды 1 и 2 задают регулярки для передних и задних основ, третья - все наборы больше чем из 1 буквы, четвёртая - принятие на ввод основы, числа и падежа
+define FrontStem [Consonant* [ FrontVowel | NeutralVowel ] ]+ Consonant*;
+define BackStem [Consonant* [ BackVowel | NeutralVowel ] ]* [Consonant* BackVowel] [Consonant* [ BackVowel | NeutralVowel ] ]* Consonant*;
+define Stem Letter+;
+
+define Input Stem Number Case;
+
+# обработка основ на согласный, написанная мной
+define LongVowel ä ä | ö ö | y y | e e | i i | a a | o o | u u; 
+define Ihminen n e n -> s e  ||  _ /["+Sg" "+Part"];
+define IhminenPart n e n -> s  ||  _ "+Sg" "+Part";
+define Ajatus s -> k s e || Vowel _ /["+Sg" "+Part"];
+define HyvyysSg s -> t e || LongVowel _ "+Sg" /"+Part" ;
+define HyvyysPl s -> k s e || LongVowel _ "+Pl" ; 
+define HyvyysPart s -> t || LongVowel _ "+Sg" "+Part" ;
+define AskelEl e l -> e l e ||  _ "+Sg" /"+Part" ;
+define AskelEn e n -> e n e ||  _ "+Sg" /"+Part" ;
+define Lyhyt t -> e || [ u | y ]_ "+Sg" ;
+
+# команды задают номинативы - сингулярис и плюралис и объединяют их в одно множество
+define NomPl "+Pl" "+Nom" -> "^" t || _ ;
+define NomSg "+Sg" "+Nom" -> "^" || _ ;
+define Nominatives NomPl .o. NomSg ;
+
+# команды задаюют генитивы и объединяют их в одно множество
+define GenDen "+Gen" -> d e n || Vowel Vowel "+Pl" _ ;
+define Gen "+Gen" -> E n || _ ;
+define Genetive GenDen .o. Gen ;
+
+# команды задают пертитивы, два локативных падежа и объединяют их в множество "остальные падежы"
+define PartTa "+Part" -> t A || [ Consonant Vowel Vowel | Consonant ] Number _ ;
+define PartA "+Part" -> A || _ ;
+
+define LocativeCases "+In" -> s s A , "+All" -> l l A || _ ;
+
+define OtherCases PartTa .o. PartA .o. LocativeCases ;
+
+# код задаёт изменения гласных в корне при образовании форм
+define Sg "+Sg" -> "^" || _ ;
+define OmitA ä -> 0, i -> 0 || _ "+Pl";
+define Ai2Oi a -> o || [ a | e | i ] Vowel* Consonant+ _ "+Pl";
+define Ai2i a -> 0 || [ o | u ] Vowel* Consonant+ _ "+Pl";
+define OmitFirst Vowel -> 0 || _ Vowel "+Pl" Consonant;
+define Pl "+Pl" -> "^" i || _ ;
+
+define NumberInfl Sg .o. OmitA .o. Ai2i .o. Ai2Oi .o. OmitFirst .o. Pl ;
+
+# код задаёт сингармонизмы, встречающиеся при образовании падежных форм
+define JotPl i -> j || Vowel "^"* _ "^"* Vowel ;
+define HarmonyBack A -> a || BackStem "^" Letter* _;
+define HarmonyFront A -> ä || FrontStem "^" Letter* _;
+
+define Phonetics JotPl .o. HarmonyBack .o. HarmonyFront ;
+
+# код задаёт супплетивизмы, встречающиеся при образовании падежных форм
+define DoublePTK p p -> p , t t -> t , k k -> k || Letter _ "^"* Vowel "^"* Consonant [ .#. | Consonant ] ;
+define SingleP p -> v || Vowel _ "^"* Vowel "^"* Consonant [ .#. | Consonant ] ;
+define SingleTK t -> d , k -> 0 || Letter _ "^"* Vowel "^"* Consonant [ .#. | Consonant ] ; 
+define TwoLetter m p -> m m , n t -> n n , n k -> n g , l t -> l l , r t -> r r || Letter _ "^"* Vowel "^"* Consonant [ .#. | Consonant ] ;
+define ThreeLetter l k e -> l j e , r k e -> r j e , h k e -> h j e , u k u -> u v u || Letter _ "^"* Consonant [ .#. | Consonant ] ;
+define N2M i n -> i m , t ö n -> t t ö m || _ "^" Vowel;
+define EOmit E -> 0 || Vowel "^" _;
+define EReal E -> e || _;
+
+define Alternations N2M  .o. EOmit .o. EReal .o. ThreeLetter .o. TwoLetter .o. SingleP .o. SingleTK .o. DoublePTK ;
+
+# код задаёт множество всех возможных изменений при образовании падежей
+define Affixes Nominatives .o. Genetive .o. OtherCases .o. NumberInfl .o. Alternations .o. Phonetics;
+
+# команда очищает ввод
+define Cleanup "^" -> 0 || _ ;
+
+# команды объединяют все действия и применяемые правила в одну последовательность
+define Grammar Input .o. Affixes .o. Cleanup ;
+push Grammar
